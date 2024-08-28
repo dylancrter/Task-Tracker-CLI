@@ -1,18 +1,22 @@
 import java.io.*;
 import java.nio.file.*;
+import java.util.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 public class TaskTracker {
-    private static final String JSON_FILE = "tasks.json";
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static void main(String[] args) {
+
         if (args.length < 1) {
            System.out.println("Usage: java TaskTracker <command> [arguments]");
            return;
@@ -21,8 +25,8 @@ public class TaskTracker {
         String command = args[0];
         switch(command) {
             case "add":
-                if (args.length < 2) {
-                    System.out.println("Usage: java TaskTracker add <description");
+                if (args.length != 2) {
+                    System.out.println("Usage: java TaskTracker add <description>");
                     return;
                 }
                 addTask(args[1]);
@@ -32,12 +36,64 @@ public class TaskTracker {
                     System.out.println("Usage: java TaskTracker update <taskID> <description>");
                     return;
                 }
-                updateTask(Integer.parseInt(args[1]), args[2]);
+                String input = String.join(" ", args);
+                Pattern pattern = Pattern.compile("\"([^\"]*)\"");
+                Matcher matcher = pattern.matcher(input);
+                String taskDescription = "";
+                if (matcher.find()) {
+                    taskDescription = matcher.group(1);
+                }
+                updateTask(Integer.parseInt(args[1]), taskDescription);
+                break;
+            case "delete":
+                if (args.length != 2) {
+                    System.out.println("Usage: java TaskTracker delete <taskID>");
+                    return;
+                }
+                deleteTask(Integer.parseInt(args[1]));
+                break;
+            case "mark-in-progress":
+                if (args.length != 2) {
+                    System.out.println("Usage: java TaskTracker mark-in-progress <taskID>");
+                    return;
+                }
+                markTaskStatus(Integer.parseInt(args[1]), "in-progress");
+                break;
+            case "mark-done":
+                if (args.length != 2) {
+                    System.out.println("Usage: java TaskTracker mark-done <taskID>");
+                    return;
+                }
+                markTaskStatus(Integer.parseInt(args[1]), "done");
+                break;
+            case "list":
+                if (args.length != 1) {
+                    System.out.println("Usage: java TaskTracker list");
+                    return;
+                }
+                listTasks(null, true);
+                break;
+            default:
+                System.out.println("Command not recognized. Please try again.");
         }
     }
 
     private static void addTask(String description) {
+        Task task = new Task();
+        task.setDescription(description);
+        task.setCreatedAt(LocalDateTime.now());
+        task.setUpdatedAt(LocalDateTime.now());
+        task.setStatus("in-progress");
+        int id = 0;
 
+        List<Task> tasks;
+        tasks = readTasksFromFile();
+        id = tasks.size();
+        task.setId(id);
+        tasks.add(task);
+
+        writeTasksToFile(tasks);
+        System.out.println("Task added successfully (ID: " + task.getId() + ")");
     }
 
     private static void updateTask(int id, String newDescription) {
@@ -52,38 +108,40 @@ public class TaskTracker {
 
     }
 
-    private static void listTasks(String status) {
-        JSONArray tasks = readTasksFromFile();
-        for (Object obj : tasks) {
-            JSONObject task = (JSONObject) obj;
-            if (status == null || status.equals(task.get("status"))) {
-                System.out.println("ID: " + task.get("id") + ", Description: " + task.get("description") +
-                        ", Status: " + task.get("status") + ", Created: " + task.get("createdAt") +
-                        ", Updated: " + task.get("updatedAt"));
-            }
-        }
+    private static void listTasks(String status, boolean all) {
+
     }
 
-    private static JSONArray readTasksFromFile() {
+    private static List<Task> readTasksFromFile() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
         try {
-            InputStream inputStream = TaskTracker.class.getClassLoader().getResourceAsStream(JSON_FILE);
-            if (inputStream != null) {
-                JSONParser parser = new JSONParser();
-                try (InputStreamReader reader = new InputStreamReader(inputStream)) {
-                    return (JSONArray) parser.parse(reader);
-                }
-            } else {
-                System.out.println("File not found: " + JSON_FILE);
-                return new JSONArray();
-            }
-        } catch (IOException | ParseException e) {
-            e.printStackTrace();
-            return new JSONArray();
+            return mapper.readValue(getTasksFile(), new TypeReference<>() {
+            });
+        } catch (IOException e) {
+            return new ArrayList<Task>();
         }
     }
 
-    private static void updateTask(JSONArray tasks) {
+    private static void updateTask() {
 
+    }
+
+    private static void writeTasksToFile(List<Task> tasks) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+        try {
+            mapper.writeValue(getTasksFile(), tasks);
+        } catch (IOException e) {
+            System.err.println("Error writing tasks to file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static File getTasksFile() {
+        String filepath = "src/main/resources/tasks.json";
+        return new File(filepath);
     }
 
 }
