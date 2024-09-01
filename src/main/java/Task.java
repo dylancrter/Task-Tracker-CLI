@@ -1,15 +1,12 @@
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
 public class Task {
 
     private int id;
     private String description;
     private String status;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String createdAt;
+    private String updatedAt;
 
-    public Task(String description, String status, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Task(String description, String status, String createdAt, String updatedAt) {
         this.description = description;
         this.status = status;
         this.createdAt = createdAt;
@@ -30,15 +27,9 @@ public class Task {
         return status;
     }
 
-    public String getCreatedAt() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        return this.createdAt.format(formatter);
-    }
+    public String getCreatedAt() { return this.createdAt; }
 
-    public String getUpdatedAt() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        return this.updatedAt.format(formatter);
-    }
+    public String getUpdatedAt() { return this.updatedAt; }
 
     public void setId(int id) { this.id = id; }
 
@@ -48,12 +39,17 @@ public class Task {
 
     public void setStatus(String status) { this.status = status; }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
+    public void setUpdatedAt(String updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String toString() {
+        return "ID: " + id + "\nDescription: " + description + "\nStatus: " + status + "\n" + "Created At: " +
+                createdAt + "\n" + "Updated At: " + updatedAt + "\n";
     }
 
 }
